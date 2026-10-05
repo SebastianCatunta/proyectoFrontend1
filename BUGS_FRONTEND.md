@@ -35,6 +35,41 @@
 - **Después:** `: "text-muted hover:bg-primary-50 hover:text-ink"`
 - **Cómo verificar:** Iniciar sesión con cualquier rol: todos los enlaces del menú lateral se leen en gris y el activo en morado.
 
+## Bug #6 — Títulos de sección del menú invisibles
+- **Archivo:** `src/components/app-shell.tsx` (líneas 106 y 112)
+- **Problema:** Los encabezados de grupo del menú ("Catálogo", "Operación", "Personas", "Cuenta") usaban `text-white` sobre fondo blanco y no se veían.
+- **Antes:** `text-xs font-bold tracking-wider text-white uppercase`
+- **Después:** `text-xs font-bold tracking-wider text-muted uppercase`
+- **Cómo verificar:** Entrar como admin: en el menú lateral se leen los títulos "CATÁLOGO", "OPERACIÓN", "PERSONAS" y "CUENTA".
+
+## Bug #7 — Las clases del sábado aparecían en la columna del viernes
+- **Archivo:** `src/components/week-schedule.tsx` (líneas 13-15)
+- **Problema:** `Math.min(DAYS.indexOf(d), 4)` juntaba el sábado (índice 5) con el viernes (índice 4). La tarjeta "Sábado" siempre decía "Sin clases" y el viernes mostraba clases que no eran suyas.
+- **Antes:** `const slots = DAYS.filter((d) => Math.min(DAYS.indexOf(d), 4) === col).flatMap((d) => byDay[d] ?? []);`
+- **Después:** `const slots = byDay[day] ?? [];`
+- **Cómo verificar:** Con un grupo que tenga clase el sábado, abrir "Horario": la clase aparece en la tarjeta "Sábado", no en "Viernes".
+
+## Bug #8 — El saludo del estudiante mostraba el apellido
+- **Archivo:** `src/app/(app)/estudiante/page.tsx` (línea 22)
+- **Problema:** Se tomaba `split(" ")[1]` (segunda palabra del nombre); para "Juliana Herrera" decía "Hola, Herrera", y con nombres de una sola palabra decía "Hola, undefined".
+- **Antes:** `` `Hola, ${me.name.split(" ")[1]}` ``
+- **Después:** `` `Hola, ${me.name.split(" ")[0]}` ``
+- **Cómo verificar:** Entrar como juliana.herrera147@universidad.edu: el encabezado dice "Hola, Juliana".
+
+## Bug #9 — Cancelar matrícula usaba el método HTTP equivocado
+- **Archivo:** `src/app/(app)/estudiante/materias/cancel-button.tsx` (línea 17)
+- **Problema:** Se llamaba `PATCH /enrollments/:id/cancel`, pero el backend define `@Post(':id/cancel')`. La cancelación respondía 404 y la matrícula no se cancelaba.
+- **Antes:** `{ method: "PATCH" }`
+- **Después:** `{ method: "POST" }`
+- **Cómo verificar:** En "Mis materias" pulsar "Cancelar" y luego "Sí, cancelar": no aparece error y la matrícula pasa a "Cancelada".
+
+## Bug #10 — La lista no se actualizaba después de cancelar
+- **Archivo:** `src/app/(app)/estudiante/materias/cancel-button.tsx` (líneas 4, 9 y 20)
+- **Problema:** La página es un Server Component; tras cancelar no se pedía `router.refresh()`, así que la tarjeta seguía como "En curso" con el botón Cancelar hasta recargar a mano.
+- **Antes:** `setConfirming(false); setLoading(false);` (sin refresco)
+- **Después:** se agrega `const router = useRouter();` y `router.refresh();` tras cancelar
+- **Cómo verificar:** Cancelar una materia: la tarjeta pasa sola a "Cancelada" (atenuada y sin botón), sin recargar la página.
+
 ## Bugs de frontera (requieren coordinar con backend/BD)
 
 ## Sospechosos (no modificados)
