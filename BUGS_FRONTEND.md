@@ -105,6 +105,41 @@
 - **Después:** `{g.enrolled} / {g.capacity} estudiantes`
 - **Cómo verificar:** Como docente, en "Mis grupos" el badge dice "12 / 30 estudiantes", igual que dentro del grupo.
 
+## Bug #16 — "Mis grupos" del docente no filtraba por el periodo abierto al entrar
+- **Archivo:** `src/app/(app)/docente/grupos/page.tsx` (línea 21)
+- **Problema:** Sin `?period=` en la URL, el selector marcaba el periodo abierto pero la consulta solo filtraba si había `requested`; se listaban los grupos de **todos** los periodos aunque el selector dijera otra cosa.
+- **Antes:** `${typeof requested === "string" && selected !== "todos" ? \`&period=${selected}\` : ""}`
+- **Después:** `${selected && selected !== "todos" ? \`&period=${selected}\` : ""}`
+- **Cómo verificar:** Como docente, entrar a "Mis grupos" sin parámetros: solo aparecen los grupos del periodo abierto, como indica el selector.
+
+## Bug #17 — "Faltan X%" del plan de evaluación con el signo invertido
+- **Archivo:** `src/app/(app)/docente/grupos/[id]/evaluations-panel.tsx` (línea 44)
+- **Problema:** `remaining = total - 100` daba negativo cuando faltaba porcentaje; con 60% decía "Te pasaste 40%" y con 120% decía "Faltan 20%".
+- **Antes:** `const remaining = total - 100;`
+- **Después:** `const remaining = 100 - total;`
+- **Cómo verificar:** En un grupo, pestaña "Evaluaciones", con evaluaciones que sumen 60%: la tarjeta dice "Faltan 40% para completar el plan."
+
+## Bug #18 — La planilla rechazaba notas escritas con coma ("4,5")
+- **Archivo:** `src/app/(app)/docente/grupos/[id]/grade-sheet-panel.tsx` (línea 19)
+- **Problema:** El comentario dice que se acepta coma o punto, pero el regex solo admite punto; "4,5" se marcaba como nota inválida y bloqueaba el botón Guardar.
+- **Antes:** `const t = text.trim();`
+- **Después:** `const t = text.trim().replace(",", ".");`
+- **Cómo verificar:** En la pestaña "Notas", escribir `4,5` en una celda: se resalta como cambio válido (no en rojo) y se guarda como 4.5.
+
+## Bug #19 — "Guardar nombre" siempre deshabilitado en Mi cuenta
+- **Archivo:** `src/app/(app)/cuenta/account-forms.tsx` (línea 79)
+- **Problema:** El botón exige `dirty`, pero `setDirty` nunca se llamaba (el lint lo marcaba: "'setDirty' is assigned a value but never used"). El usuario no podía cambiar su nombre.
+- **Antes:** `onChange={(e) => setNewName(e.target.value)}`
+- **Después:** `onChange={(e) => { setNewName(e.target.value); setDirty(true); }}`
+- **Cómo verificar:** En "Mi cuenta", cambiar el nombre: el botón "Guardar nombre" se habilita y al pulsarlo aparece "Nombre actualizado." `npm run lint` ya no muestra el warning.
+
+## Bug #20 — "Materias matriculadas" del inicio contaba también canceladas y de periodos pasados
+- **Archivo:** `src/app/(app)/estudiante/page.tsx` (línea 16)
+- **Problema:** La tarjeta dice "Matrículas activas este periodo", pero la consulta no filtraba por estado y contaba todas las matrículas del historial (canceladas, aprobadas y reprobadas).
+- **Antes:** `"/enrollments/mine?limit=1"`
+- **Después:** `"/enrollments/mine?limit=1&status=activa"`
+- **Cómo verificar:** Con un estudiante con materias aprobadas en periodos anteriores, la tarjeta de inicio muestra solo las matrículas en curso (igual que las de "En curso" en "Mis materias").
+
 ## Bugs de frontera (requieren coordinar con backend/BD)
 
 ## Sospechosos (no modificados)

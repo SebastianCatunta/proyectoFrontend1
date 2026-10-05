@@ -13,7 +13,7 @@ export default async function StudentHome() {
   const [me, period, active, notifications] = await Promise.all([
     apiGet<Me>("/users/me"),
     apiGetOrNull<Period>("/periods/current"),
-    apiGetOrNull<Paginated<unknown>>("/enrollments/mine?limit=1"),
+    apiGetOrNull<Paginated<unknown>>("/enrollments/mine?limit=1&status=activa"),
     apiGetOrNull<Paginated<Notification> & { unread: number }>("/notifications/mine?limit=1"),
   ]);
 
