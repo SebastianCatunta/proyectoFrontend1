@@ -65,7 +65,7 @@ export default async function CurriculumPage() {
                         <Lock className="size-3" aria-hidden /> Requiere: {s.missingPrerequisites.join(", ")}
                       </p>
                     )}
-                    {s.canEnroll && s.status === "pendiente" && <p className="mt-2 text-xs font-semibold text-primary-700">Puedes matricularla</p>}
+                    {s.canEnroll && <p className="mt-2 text-xs font-semibold text-primary-700">Puedes matricularla</p>}
                   </li>
                 ))}
               </ul>

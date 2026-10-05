@@ -175,6 +175,51 @@
 - **Después:** `toBody: (v) => ({ student: text(v.student), groupId: text(v.group) })`
 - **Cómo verificar:** En "Matrículas" → "Matricular estudiante", elegir estudiante y grupo y pulsar "Crear": aparece "Registro creado correctamente." y la matrícula sale en la tabla.
 
+## Bug #26 — "Docentes activos" del panel admin mostraba el número de estudiantes
+- **Archivo:** `src/app/(app)/admin/page.tsx` (línea 23)
+- **Problema:** La tarjeta "Docentes activos" leía `d.active.students`, así que mostraba el mismo número que "Estudiantes activos".
+- **Antes:** `label="Docentes activos" value={d.active.students}`
+- **Después:** `label="Docentes activos" value={d.active.teachers}`
+- **Cómo verificar:** Entrar como admin: "Docentes activos" muestra un número distinto de "Estudiantes activos", igual al total de "Docentes" filtrado por Activos.
+
+## Bug #27 — Matrículas por estado del periodo abierto siempre en 0
+- **Archivo:** `src/app/(app)/admin/page.tsx` (línea 58)
+- **Problema:** `enrollmentsByStatus` viene con llaves `activa`, `aprobada`, etc. (backend: `[x._id, x.total]`), pero se indexaba con la etiqueta ("Activas", "Aprobadas"…), que nunca existe; las 4 cifras salían en 0.
+- **Antes:** `{p.enrollmentsByStatus[label] ?? 0}`
+- **Después:** `{p.enrollmentsByStatus[key] ?? 0}`
+- **Cómo verificar:** Con un periodo abierto y matrículas, el panel admin muestra en "Activas", "Canceladas", etc. las mismas cifras que el filtro de "Matrículas".
+
+## Bug #28 — Las fechas de los periodos salían un día antes
+- **Archivo:** `src/lib/format.ts` (línea 20)
+- **Problema:** Las fechas se guardan a medianoche UTC (`1978-02-02T00:00:00Z`) y `date()` las formateaba en la zona horaria del navegador; en Colombia (UTC-5) "2 feb" se mostraba "1 feb". El inicio del estudiante ya usaba `timeZone: "UTC"`, y la tabla de Periodos del admin no.
+- **Antes:** `toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })`
+- **Después:** `toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })`
+- **Cómo verificar:** En "Periodos" (admin), las fechas de inicio y fin coinciden con las guardadas y con las del inicio del estudiante (p. ej. "2 feb 1978").
+
+## Bug #29 — Las notas se truncaban en vez de redondearse
+- **Archivo:** `src/lib/format.ts` (línea 17)
+- **Problema:** `grade()` hacía `Math.floor(value * 10) / 10`, que corta el decimal: un promedio de 3.96 se veía como "3.9" y 4.75 como "4.7". El backend redondea (`round2`) y el formato pide "un decimal en pantalla".
+- **Antes:** `(Math.floor(value * 10) / 10).toFixed(1)`
+- **Después:** `value.toFixed(1)`
+- **Cómo verificar:** Un estudiante con promedio 3.96 ve "4.0" en "Historial" y en los reportes (antes "3.9").
+
+## Bug #30 — La malla no indicaba que una materia reprobada se puede volver a matricular
+- **Archivo:** `src/app/(app)/estudiante/malla/page.tsx` (línea 68)
+- **Problema:** El backend ya calcula `canEnroll` para materias pendientes **o reprobadas** sin prerrequisitos faltantes, pero el front agregaba `&& s.status === "pendiente"` y ocultaba "Puedes matricularla" en las materias "Por repetir".
+- **Antes:** `{s.canEnroll && s.status === "pendiente" && <p …>Puedes matricularla</p>}`
+- **Después:** `{s.canEnroll && <p …>Puedes matricularla</p>}`
+- **Cómo verificar:** Como estudiante con una materia reprobada, en "Malla curricular" su tarjeta "Por repetir" muestra "Puedes matricularla".
+
 ## Bugs de frontera (requieren coordinar con backend/BD)
+- **`GET /enrollments/mine` solo permite rol Docente** (`BackendProyecto1/src/enrollments/enrollments.controller.ts`, `@Roles(Role.Docente)`). El front lo usa como estudiante en Inicio, "Mis materias" y "Notas" → 403. Debería ser `Role.Estudiante`.
+- **Prefijo global `api/v1`** (`BackendProyecto1/src/main.ts`): el front, la colección de Postman y el README del backend usan `/api/...`. Con `api/v1` todas las llamadas responden 404.
+- **Puerto del backend** (`main.ts`: `process.env.APP_PORT ?? 3001`): el `.env` del backend define `PORT=3000` y el front corre en 3001, así que chocan. El front apunta a 3000 (bug #4).
+- **`@Controller('evaluationslalala')`** (`BackendProyecto1/src/evaluations/evaluations.controller.ts`): el front llama a `/evaluations` (planilla, notas del estudiante y plan de evaluación).
+- **`UpdateUserDto.namesssss`** (`BackendProyecto1/src/users/dto/user.dto.ts`): el front envía `name` al editar un usuario y, con `forbidNonWhitelisted`, el backend lo rechaza.
+- **`POST /users` con `@HttpCode(400)`** (`users.controller.ts`): crear un usuario responde 400 aunque se cree, y el front muestra error.
+- **`@Get(':id')` declarado antes de `@Get('me')`** en `users.controller.ts`: `/users/me` cae en `:id` (ParseObjectIdPipe → 400) y además pide rol Admin; el layout de toda la app (`src/app/(app)/layout.tsx`) depende de `/users/me`.
 
 ## Sospechosos (no modificados)
+- `src/components/ui/modal.tsx` línea 21: `onCancel={(e) => e.preventDefault()}` hace que la tecla Escape no cierre ningún modal. Puede ser a propósito (para respetar `keepOpenIfDirty`); la alternativa sería `onCancel={(e) => { e.preventDefault(); onClose(); }}`.
+- `a.txt` y `s.txt` en la raíz: cookies de curl con tokens JWT (admin y estudiante) commiteados en el repo. No afectan a la app, pero conviene borrarlos.
+- `src/components/ui/bar.tsx`: el tono `warning` usa `bg-accent-400` en vez de un color `warning-*`. Es visual y no está claro que sea un error.
