@@ -18,7 +18,7 @@
 - **Archivo:** `src/proxy.ts` (línea 20)
 - **Problema:** La comparación `pathname === p` solo coincidía con `/admin`, `/docente` y `/estudiante` exactos. Un estudiante podía abrir `/admin/usuarios` o `/docente/grupos` porque las subrutas no se revisaban.
 - **Antes:** `find((p) => pathname === p)`
-- **Después:** `find((p) => pathname === p || pathname.startsWith(\`${p}/\`))`
+- **Después:** ``find((p) => pathname === p || pathname.startsWith(`${p}/`))``
 - **Cómo verificar:** Iniciar sesión como estudiante y escribir `/admin/usuarios` en la barra de direcciones: redirige a `/estudiante`.
 
 ## Bug #4 — Puerto del backend equivocado en `.env.example`
@@ -108,8 +108,8 @@
 ## Bug #16 — "Mis grupos" del docente no filtraba por el periodo abierto al entrar
 - **Archivo:** `src/app/(app)/docente/grupos/page.tsx` (línea 21)
 - **Problema:** Sin `?period=` en la URL, el selector marcaba el periodo abierto pero la consulta solo filtraba si había `requested`; se listaban los grupos de **todos** los periodos aunque el selector dijera otra cosa.
-- **Antes:** `${typeof requested === "string" && selected !== "todos" ? \`&period=${selected}\` : ""}`
-- **Después:** `${selected && selected !== "todos" ? \`&period=${selected}\` : ""}`
+- **Antes:** ``${typeof requested === "string" && selected !== "todos" ? `&period=${selected}` : ""}``
+- **Después:** ``${selected && selected !== "todos" ? `&period=${selected}` : ""}``
 - **Cómo verificar:** Como docente, entrar a "Mis grupos" sin parámetros: solo aparecen los grupos del periodo abierto, como indica el selector.
 
 ## Bug #17 — "Faltan X%" del plan de evaluación con el signo invertido
@@ -139,6 +139,41 @@
 - **Antes:** `"/enrollments/mine?limit=1"`
 - **Después:** `"/enrollments/mine?limit=1&status=activa"`
 - **Cómo verificar:** Con un estudiante con materias aprobadas en periodos anteriores, la tarjeta de inicio muestra solo las matrículas en curso (igual que las de "En curso" en "Mis materias").
+
+## Bug #21 — Los filtros del panel de administración se perdían al cambiar de página
+- **Archivo:** `src/components/admin/resource-manager.tsx` (línea 115)
+- **Problema:** Los filtros solo se mandaban a la API si `page === 1`. Al pulsar "Siguiente", la página 2 traía registros sin filtrar (p. ej. usuarios de cualquier rol aunque se filtrara por "Docente").
+- **Antes:** `if (page === 1) Object.entries(filters).forEach(([k, v]) => v && params.set(k, v));`
+- **Después:** `Object.entries(filters).forEach(([k, v]) => v && params.set(k, v));`
+- **Cómo verificar:** En "Usuarios", filtrar por rol "Estudiante" y pasar a la página 2: todos los registros siguen siendo estudiantes.
+
+## Bug #22 — Las tablas de administración se cortaban en pantallas pequeñas
+- **Archivo:** `src/components/admin/resource-manager.tsx` (línea 187)
+- **Problema:** La tabla tiene `min-w-[40rem]` dentro de una `Card` con `overflow-hidden`, pero el contenedor no tenía `overflow-x-auto`; en móvil o ventanas angostas las columnas de la derecha (incluida "Acciones") quedaban ocultas sin poder desplazarse. Las demás tablas de la app sí usan `overflow-x-auto`.
+- **Antes:** `<div>`
+- **Después:** `<div className="overflow-x-auto">`
+- **Cómo verificar:** Abrir "Grupos" o "Usuarios" con la ventana a ~400 px de ancho: la tabla se puede desplazar horizontalmente y se ven los botones de Acciones.
+
+## Bug #23 — El formulario de edición de usuarios no se podía cerrar
+- **Archivo:** `src/components/admin/resource-manager.tsx` (línea 297)
+- **Problema:** Para saber si había cambios se comparaban los valores del formulario con la fila cruda de la API (`row`), que tiene otra forma (`_id`, `createdAt`, sin `password`…). Siempre daba "con cambios", y como Usuarios usa `keepOpenIfDirty`, ni "Cancelar" ni la X cerraban el modal de edición.
+- **Antes:** `JSON.stringify(row ?? config.initial(null))`
+- **Después:** `JSON.stringify(config.initial(row))`
+- **Cómo verificar:** En "Usuarios", pulsar Editar y luego "Cancelar" sin tocar nada: el modal se cierra. Si se modifica un campo, sigue abierto (comportamiento esperado de `keepOpenIfDirty`).
+
+## Bug #24 — El admin no podía cancelar matrículas (método HTTP equivocado)
+- **Archivo:** `src/components/admin/operations.tsx` (línea 346)
+- **Problema:** Igual que en el estudiante: se usaba `PATCH /enrollments/:id/cancel`, pero el backend define `POST`. El modal mostraba error y la matrícula no se cancelaba.
+- **Antes:** `{ method: "PATCH" }`
+- **Después:** `{ method: "POST" }`
+- **Cómo verificar:** En "Matrículas", pulsar el ícono de cancelar de una matrícula en curso y confirmar: el modal se cierra y el estado pasa a "Cancelada".
+
+## Bug #25 — "Matricular estudiante" (admin) enviaba `group` en vez de `groupId`
+- **Archivo:** `src/components/admin/operations.tsx` (línea 336)
+- **Problema:** El backend espera `{ student, groupId }` y rechaza propiedades desconocidas; con `group` respondía 400 y el admin no podía matricular a nadie.
+- **Antes:** `toBody: (v) => ({ student: text(v.student), group: text(v.group) })`
+- **Después:** `toBody: (v) => ({ student: text(v.student), groupId: text(v.group) })`
+- **Cómo verificar:** En "Matrículas" → "Matricular estudiante", elegir estudiante y grupo y pulsar "Crear": aparece "Registro creado correctamente." y la matrícula sale en la tabla.
 
 ## Bugs de frontera (requieren coordinar con backend/BD)
 
