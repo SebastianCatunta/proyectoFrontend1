@@ -70,6 +70,41 @@
 - **Después:** se agrega `const router = useRouter();` y `router.refresh();` tras cancelar
 - **Cómo verificar:** Cancelar una materia: la tarjeta pasa sola a "Cancelada" (atenuada y sin botón), sin recargar la página.
 
+## Bug #11 — "Mis materias" ordenaba los periodos del más viejo al más nuevo
+- **Archivo:** `src/app/(app)/estudiante/materias/page.tsx` (línea 22)
+- **Problema:** El comentario y el diseño piden "el más reciente primero", pero el `sort` era ascendente; el periodo abierto quedaba al final de la página.
+- **Antes:** `.sort(([a], [b]) => a.localeCompare(b))`
+- **Después:** `.sort(([a], [b]) => b.localeCompare(a))`
+- **Cómo verificar:** En "Mis materias", con matrículas en varios periodos, el primero que aparece es el más reciente (p. ej. 2026-2 antes que 2026-1).
+
+## Bug #12 — Matricular enviaba el campo `group` en vez de `groupId`
+- **Archivo:** `src/app/(app)/estudiante/matricula/enroll-view.tsx` (línea 50)
+- **Problema:** El backend (`CreateEnrollmentDto`) espera `groupId` y tiene `forbidNonWhitelisted`, así que el body `{ group }` se rechazaba con 400 ("property group should not exist") y nadie podía matricularse.
+- **Antes:** `body: { group: g.group }`
+- **Después:** `body: { groupId: g.group }`
+- **Cómo verificar:** En "Matricular", pulsar "Matricular" en un grupo: aparece "Quedaste matriculado en …" y los créditos suben.
+
+## Bug #13 — Una nota de 3.0 se pintaba como reprobada
+- **Archivo:** `src/app/(app)/estudiante/notas/page.tsx` (línea 73)
+- **Problema:** Se aprueba con 3.0 o más, pero la condición `value <= PASSING` ponía en rojo las notas de exactamente 3.0.
+- **Antes:** `value <= PASSING ? "text-danger-600"`
+- **Después:** `value < PASSING ? "text-danger-600"`
+- **Cómo verificar:** En "Notas", una evaluación con 3.0 se ve en verde; una con 2.9, en rojo.
+
+## Bug #14 — El acumulado de notas era un promedio simple y no ponderado
+- **Archivo:** `src/app/(app)/estudiante/notas/page.tsx` (línea 40)
+- **Problema:** "Acumulado (X% evaluado)" sumaba las notas y dividía por la cantidad, sin usar el peso de cada evaluación. El backend (`academic.service.ts`) calcula `accumulated += value * (weight / 100)`, así que el estudiante veía un número distinto al de la planilla del docente.
+- **Antes:** `graded.length > 0 ? graded.reduce((sum, r) => sum + (r.value ?? 0), 0) / graded.length : 0`
+- **Después:** `graded.reduce((sum, r) => sum + (r.value ?? 0) * (r.ev.weight / 100), 0)`
+- **Cómo verificar:** Con un parcial de 30% calificado con 4.0, el acumulado muestra 1.20 (antes mostraba 4.00), igual que la columna "Acumulado" del docente.
+
+## Bug #15 — Cupo del grupo invertido en "Mis grupos" del docente
+- **Archivo:** `src/app/(app)/docente/grupos/page.tsx` (línea 52)
+- **Problema:** El badge mostraba `capacidad / matriculados` (p. ej. "30 / 12 estudiantes"), al revés que en el detalle del grupo.
+- **Antes:** `{g.capacity} / {g.enrolled} estudiantes`
+- **Después:** `{g.enrolled} / {g.capacity} estudiantes`
+- **Cómo verificar:** Como docente, en "Mis grupos" el badge dice "12 / 30 estudiantes", igual que dentro del grupo.
+
 ## Bugs de frontera (requieren coordinar con backend/BD)
 
 ## Sospechosos (no modificados)
