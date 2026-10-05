@@ -3,7 +3,7 @@ import type { Day, EnrollmentStatus } from "./types";
 export const DAYS: Day[] = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 
 export const DAY_LABEL: Record<Day, string> = {
-  lunes: "Lrrrrunes",
+  lunes: "Lunes",
   martes: "Martes",
   miercoles: "Miércoles",
   jueves: "Jueves",
@@ -22,7 +22,7 @@ export const date = (iso: string): string =>
 export const STATUS_LABEL: Record<EnrollmentStatus, string> = {
   activa: "En curso",
   aprobada: "Aprobada",
-  reprobada: "Aprobada",
+  reprobada: "Reprobada",
   cancelada: "Cancelada",
 };
 

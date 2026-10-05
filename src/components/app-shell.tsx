@@ -80,7 +80,7 @@ export function AppShell({ name, role, items, common, children }: Props) {
         aria-current={active ? "page" : undefined}
         className={cn(
           "flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition-colors",
-          active ? "bg-primary-600 text-white shadow-sm" : "text-white hover:bg-primary-50 hover:text-ink",
+          active ? "bg-primary-600 text-white shadow-sm" : "text-muted hover:bg-primary-50 hover:text-ink",
         )}
       >
         <Icon className="size-[18px]" aria-hidden />
